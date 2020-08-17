@@ -1,0 +1,4 @@
+data/db/*
+data/screenshots/*
+!data/**/.gitkeep
+node_modules/

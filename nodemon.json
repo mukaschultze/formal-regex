@@ -7,6 +7,6 @@
     "watch": [
         "src"
     ],
-    "exec": "npm start",
+    "exec": "npm run nodemon:start",
     "ext": "ts"
 }

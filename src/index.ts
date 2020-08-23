@@ -45,11 +45,11 @@ async function main() {
                 },
             ];
 
-            const { regex, input, logNFA } = await prompts(questions);
+            const { regex, input, logNFA } = await prompts(questions, { onCancel: () => process.exit(0) });
             const compiled = compile(regex);
             const matched = compiled(input, logNFA);
 
-            console.log(`A palavra ${chalk.blue(input)} ${matched ? "" : chalk.red("NÃO ")}é validada por ${chalk.blue(regex)}`);
+            console.log(`A palavra ${chalk.blue(input || "ɛ")} ${matched ? "" : chalk.red("NÃO ")}é validada por ${chalk.blue(regex)}`);
         } catch (err) {
             if (err instanceof Error)
                 console.error(chalk.red(err.message));

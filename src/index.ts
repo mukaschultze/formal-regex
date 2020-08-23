@@ -1,3 +1,5 @@
+import * as chalk from "chalk";
+import * as prompts from "prompts";
 import { compile } from "./regex-compiler";
 
 // EXPRESSION -> SUBEXPRESSION SUBEXPRESSION | SUBEXPRESSION
@@ -10,20 +12,6 @@ import { compile } from "./regex-compiler";
 // CHAR -> a-z A-Z
 // EMPTY -> ɛ
 
-// EXPRESSION   -> TERM EXPRESSSION'
-// EXPRESSSION' -> '|' TERM EXPRESSSION' | EMPTY
-// TERM         -> KLEEN TERM'
-// TERM'        -> KLEEN TERM' | EMPTY
-// KLEEN        -> TERMINAL | TERMINAL '*'
-// TERMINAL     -> '(' EXPRESSION ')' | CHAR | EMPTY
-// CHAR         -> a-z A-Z
-// EMPTY        -> ɛ
-
-function validate(input: string, regex: string) {
-    const compiled = compile(regex);
-    return compiled(input);
-}
-
 // console.log(validate("aa", "aa"))
 // console.log(validate("baa", "ba*"))
 // console.log(validate("abaababababbbababababab", "(a+b)*"))
@@ -33,3 +21,44 @@ function validate(input: string, regex: string) {
 // console.log(validate("bbbbbbbaababbbbbbbabbbbb", "(a+ɛ)(b+ba)*"))
 // console.log(validate("", "(a+ɛ)*"));
 // console.log(validate("aaaaaaa", "(a+ɛ[]]"));
+
+async function main() {
+    while (true) {
+        try {
+            console.log(chalk.yellow("O token 'ɛ' pode ser representado por '3'\nEspaços são considerados como literais"));
+
+            const questions: prompts.PromptObject<string>[] = [
+                {
+                    type: 'text',
+                    name: 'regex',
+                    message: 'Expressão regular',
+                    initial: '(a+ɛ)(b+ba)*',
+                },
+                {
+                    type: 'text',
+                    name: 'input',
+                    message: 'Texto para validar'
+                }, {
+                    type: 'confirm',
+                    name: 'logNFA',
+                    message: 'Mostrar a NFA e as transições?'
+                },
+            ];
+
+            const { regex, input, logNFA } = await prompts(questions);
+            const compiled = compile(regex);
+            const matched = compiled(input, logNFA);
+
+            console.log(`A palavra ${chalk.blue(input)} ${matched ? "" : chalk.red("NÃO ")}é validada por ${chalk.blue(regex)}`);
+        } catch (err) {
+            if (err instanceof Error)
+                console.error(chalk.red(err.message));
+            else
+                console.error(chalk.red("ERRO DESCONHECIDO"));
+        }
+    }
+}
+
+main()
+    .then()
+    .catch((err: Error) => console.error(chalk.red(err.message)));

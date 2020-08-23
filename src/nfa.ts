@@ -7,35 +7,32 @@ export type SyntacticNode = {
     literal?: string,
 };
 
-type A = {
+type StateNFA = {
+    state: number,
     literal?: string,
-    start?: boolean,
     end?: boolean,
     transitions: Transition[]
 }
 
 type Transition = number | { char: string, target: number };
+
 const EMPTY = "ɛ";
 
 export class NFA {
 
-    private automata: A[] = [
-        { start: true, transitions: [] },
-        { end: true, transitions: [] },
+    private automata: StateNFA[] = [
+        { state: 0, transitions: [] },
+        { state: 1, transitions: [], end: true },
     ];
 
     constructor(syntacticTree: SyntacticNode) {
-        // console.log(syntacticTree);
-        // this.flatMapChildren(syntacticTree);
         const [start, end] = this.getAutomata(syntacticTree);
         this.addTransition(0, start, EMPTY);
         this.addTransition(end, 1, EMPTY);
-        console.dir(this.automata, { depth: null });
-        // console.log(automata);
+        // console.dir(this.automata, { depth: null });
     }
 
     private getAutomata(syntacticTree: SyntacticNode): [number, number] {
-        console.log(syntacticTree.type);
         switch (syntacticTree.type) {
             case "CONCAT":
                 return this.concat(syntacticTree);
@@ -45,10 +42,7 @@ export class NFA {
                 return this.union(syntacticTree);
             case "LITERAL":
             case "EMPTY":
-                return this.literal(syntacticTree, syntacticTree.literal || EMPTY);
-            default:
-                console.error("INVALID SYNTACTIC TREE NODE", syntacticTree.type)
-                return [0, 0];
+                return this.literal(syntacticTree);
         }
     }
 
@@ -59,10 +53,7 @@ export class NFA {
     }
 
     private addState() {
-        const obj = { transitions: [] };
-        const idx = this.automata.push(obj) - 1;
-        (obj as any).idx = idx;
-        return idx;
+        return this.automata.push({ state: this.automata.length, transitions: [] }) - 1;
     }
 
     private concat(node: SyntacticNode): [number, number] {
@@ -98,19 +89,24 @@ export class NFA {
         return [start, end];
     }
 
-    private literal(node: SyntacticNode, char: string): [number, number] {
+    private literal(node: SyntacticNode): [number, number] {
         const start = this.addState();
         const end = this.addState();
 
-        this.addTransition(start, end, char);
+        this.addTransition(start, end, node.literal || EMPTY);
         return [start, end];
     }
 
-    public validate(input: string) {
-        return this.recurseStates(0, input, 0, 0);
+    public validate(input: string, logNFA: boolean) {
+
+        if (logNFA)
+            console.dir(this.automata, { depth: null });
+
+        return this.recurseStates(0, input, 0, 0, logNFA);
     }
 
-    public recurseStates(currentState: number, input: string, index: number, depth: number): boolean {
+    public recurseStates(currentState: number, input: string, index: number, depth: number, logNFA: boolean): boolean {
+        const log = (message?: any, ...optionalParams: any[]) => { if (logNFA) console.log(message, ...optionalParams) };
         const current = this.automata[currentState];
         const stateTransitions = current.transitions.filter(t => typeof t === "object") as { char: string, target: number }[];
         const emptyTransitions = current.transitions.filter(t => typeof t === "number") as number[];
@@ -118,23 +114,25 @@ export class NFA {
         if (depth > 2000)
             return false; // Loop infinito
 
-        if (current.end && index === input.length)
+        if (current.end && index === input.length) {
+            log("FIM");
             return true;
+        }
 
-        console.log("CURRENT STATE", currentState, current);
+        log("CURRENT STATE", currentState, current);
 
         for (const s of stateTransitions)
             if (s.char == input[index]) {
-                console.log("READ", input[index]);
-                if (this.recurseStates(s.target, input, index + 1, depth + 1)) {
+                log("READ", input[index]);
+                if (this.recurseStates(s.target, input, index + 1, depth + 1, logNFA)) {
                     return true;
                 } else {
-                    console.log("UNREAD", input[index]);
+                    log("UNREAD", input[index]);
                 }
             }
 
         for (const s of emptyTransitions)
-            if (this.recurseStates(s, input, index, depth + 1))
+            if (this.recurseStates(s, input, index, depth + 1, logNFA))
                 return true;
 
         return false;
